@@ -1,0 +1,46 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.env.local
+.env.prod
+node_modules/
+.next/
+out/
+.venv/
+venv/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+.DS_Store
+.idea/
+.vscode/
+*.log
+.pytest_cache/
+
+# Proprietary / sensitive — never commit
+BUSINESS_PLAN.md
+PATENT_DRAFT.md
+PATENT_SYSTEM_DIAGRAM.md
+PLAN.md
+
+# Test artifacts — logs and runner output
+tests/overnight_results/
+tests/__pycache__/
+
+# Benchmark datasets and results (large files)
+tests/benchmark/data/
+tests/benchmark/results/
+tests/mega/data/
+tests/mega/data_1m/
+tests/mega/reports/
+tests/stress/*.jsonl
+
+# Backup sessions (generated at runtime)
+bitmod_backup/
+services/gateway/bitmod_backup/
