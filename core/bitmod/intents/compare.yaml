@@ -1,0 +1,15 @@
+name: compare
+description: Compare two or more items highlighting similarities and differences
+triggers:
+  - "^compare\\b"
+  - "\\bcompare\\s+.+\\s+(?:with|to|and|vs\\.?|versus)\\b"
+  - "\\bdifference(?:s)?\\s+between\\b"
+  - "\\bvs\\.?\\b"
+role: synthesizer
+compression: standard
+token_budget: 8192
+model_tier: primary
+cache_ttl: 3600
+cacheable: true
+template: "Compare the following: {query}"
+skip_llm: false

@@ -1,0 +1,14 @@
+name: summarize
+description: Condense source material into key points
+triggers:
+  - "^summarize\\b"
+  - "\\bsummary\\b"
+  - "\\btl;?dr\\b"
+role: synthesizer
+compression: high
+token_budget: 2048
+model_tier: fallback
+cache_ttl: 3600
+cacheable: true
+template: "Summarize: {query}"
+skip_llm: false

@@ -1,0 +1,14 @@
+name: explain
+description: Provide a clear explanation of a concept or topic
+triggers:
+  - "^explain\\b"
+  - "\\bexplain\\s+(?:how|why|what|the)\\b"
+  - "\\bwhat\\s+does\\s+.+\\s+mean\\b"
+role: narrator
+compression: standard
+token_budget: 4096
+model_tier: primary
+cache_ttl: 7200
+cacheable: true
+template: "Explain: {query}"
+skip_llm: false
