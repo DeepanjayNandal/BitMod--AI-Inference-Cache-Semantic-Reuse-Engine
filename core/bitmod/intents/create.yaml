@@ -1,0 +1,12 @@
+name: create
+description: Create new content or artifacts
+triggers:
+  - "^create\\b"
+role: explorer
+compression: none
+token_budget: 8192
+model_tier: primary
+cache_ttl: 0
+cacheable: false
+template: "Create: {query}"
+skip_llm: false

@@ -1,0 +1,13 @@
+name: execute
+description: Execute an action or run a process
+triggers:
+  - "^execute\\b"
+  - "^run\\b"
+role: agent
+compression: none
+token_budget: 16384
+model_tier: primary
+cache_ttl: 0
+cacheable: false
+template: "Execute: {query}"
+skip_llm: false

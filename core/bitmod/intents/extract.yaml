@@ -1,0 +1,13 @@
+name: extract
+description: Extract specific data points from source material
+triggers:
+  - "^extract\\b"
+  - "\\bextract\\s+(all|every|the)\\b"
+role: structurer
+compression: high
+token_budget: 2048
+model_tier: fallback
+cache_ttl: 86400
+cacheable: true
+template: "Extract from source: {query}"
+skip_llm: true
