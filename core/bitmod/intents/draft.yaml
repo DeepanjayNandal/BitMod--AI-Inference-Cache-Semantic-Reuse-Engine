@@ -1,0 +1,13 @@
+name: draft
+description: Draft a document, plan, or structured output
+triggers:
+  - "^draft\\b"
+  - "\\bdraft\\s+(?:a|an|the)\\b"
+role: explorer
+compression: none
+token_budget: 8192
+model_tier: primary
+cache_ttl: 1800
+cacheable: true
+template: "Draft: {query}"
+skip_llm: false

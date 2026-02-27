@@ -1,0 +1,13 @@
+name: write
+description: Write prose, documents, or structured text
+triggers:
+  - "^write\\b"
+  - "\\bwrite\\s+(?:a|an|the|me)\\b"
+role: explorer
+compression: none
+token_budget: 8192
+model_tier: primary
+cache_ttl: 1800
+cacheable: true
+template: "Write: {query}"
+skip_llm: false

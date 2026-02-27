@@ -1,0 +1,13 @@
+name: convert
+description: Convert data from one format or unit to another
+triggers:
+  - "^convert\\b"
+  - "\\bconvert\\s+.+\\s+(?:to|into)\\b"
+role: structurer
+compression: high
+token_budget: 1024
+model_tier: fallback
+cache_ttl: 86400
+cacheable: true
+template: "Convert: {query}"
+skip_llm: true

@@ -1,0 +1,14 @@
+name: list
+description: Enumerate items matching the user's criteria
+triggers:
+  - "^list\\b"
+  - "\\blist\\s+(?:all|every|the|each)\\b"
+  - "\\bgive\\s+(?:me\\s+)?a\\s+list\\b"
+role: structurer
+compression: standard
+token_budget: 4096
+model_tier: fallback
+cache_ttl: 3600
+cacheable: true
+template: "List the following: {query}"
+skip_llm: false
