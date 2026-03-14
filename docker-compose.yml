@@ -1,0 +1,167 @@
+# Bitmod Docker Compose
+# One-command startup: docker compose up
+#
+# Profiles:
+#   default:  gateway + chat + frontend (SQLite, bring-your-own LLM)
+#   ollama:   adds local Ollama for LLM + embeddings (no API keys needed)
+#   postgres:  adds PostgreSQL + pgvector for production
+#   full:     all services (Ollama + Postgres + Redis + Frontend)
+#
+# Examples:
+#   docker compose up                                   # Minimal (SQLite)
+#   docker compose --profile ollama up                  # With local LLM
+#   docker compose --profile postgres up                # With PostgreSQL
+#   docker compose --profile ollama --profile postgres up  # Everything
+
+services:
+  # --- Core Application ---
+
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    container_name: bitmod-gateway
+    env_file: .env
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://bitmod.io,https://app.bitmod.io,http://localhost:3000}
+      - CHAT_SERVICE_URL=http://bitmod-chat:8001
+    volumes:
+      - bitmod_data:/app/data
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      chat:
+        condition: service_healthy
+    networks:
+      - bitmod-public
+      - bitmod-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  chat:
+    build:
+      context: .
+      dockerfile: services/chat/Dockerfile
+    container_name: bitmod-chat
+    env_file: .env
+    environment:
+      - BITMOD_SQLITE_PATH=/app/data/bitmod.db
+    volumes:
+      - bitmod_data:/app/data
+    # Internal only — accessed via gateway, connects to data stores
+    networks:
+      - bitmod-internal
+      - bitmod-data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    build:
+      context: services/frontend
+    container_name: bitmod-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.bitmod.io}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - bitmod-public
+    restart: unless-stopped
+
+  # --- Optional: Local LLM via Ollama (--profile ollama) ---
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bitmod-ollama
+    profiles: ["ollama", "full"]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    networks:
+      - bitmod-internal
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  # --- Optional: PostgreSQL + pgvector (--profile postgres) ---
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: bitmod-postgres
+    profiles: ["postgres", "full"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bitmod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env — generate with: python3 -c "import secrets; print(secrets.token_hex(16))"}
+      POSTGRES_DB: ${POSTGRES_DB:-bitmod}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # No external port — only reachable from bitmod-data network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bitmod} -d ${POSTGRES_DB:-bitmod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bitmod-data
+    restart: unless-stopped
+
+  # --- Optional: Redis for rate limiting/sessions (--profile postgres) ---
+
+  redis:
+    image: redis:7-alpine
+    container_name: bitmod-redis
+    profiles: ["postgres", "full"]
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    volumes:
+      - redis_data:/data
+    # No external port — only reachable from bitmod-data network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - bitmod-data
+    restart: unless-stopped
+
+volumes:
+  bitmod_data:
+    name: bitmod_data
+  ollama_data:
+    name: bitmod_ollama_data
+  postgres_data:
+    name: bitmod_postgres_data
+  redis_data:
+    name: bitmod_redis_data
+
+networks:
+  bitmod-public:
+    name: bitmod-public
+    driver: bridge
+  bitmod-internal:
+    name: bitmod-internal
+    driver: bridge
+  bitmod-data:
+    name: bitmod-data
+    driver: bridge
