@@ -1,0 +1,34 @@
+# Bitmod Configuration
+# ====================
+# This file configures Bitmod's core services.
+# Environment variables take precedence over these values.
+# See docs for all available options.
+
+# LLM Provider
+# Options: anthropic, openai, ollama, gemini, xai, mistral,
+#          perplexity, openrouter, huggingface, openai_compatible
+llm_primary: ollama
+llm_primary_model: llama3.2
+# llm_fallback: anthropic
+# llm_fallback_model: claude-sonnet-4-20250514
+
+# Embedding Provider
+# Options: local (sentence-transformers), ollama, openai, cohere
+embedding_provider: ollama
+embedding_model: nomic-embed-text
+embedding_dimensions: 768
+
+# Database Backend
+# Options: sqlite (default), postgresql, mysql, mongodb
+# db_backend: sqlite
+# db_sqlite_path: bitmod.db
+
+# Vector Store (optional, uses database backend by default)
+# Options: chroma, qdrant, pinecone
+# vector_store: chroma
+
+# Gateway
+cors_origins:
+  - http://localhost:3000
+  - https://bitmod.io
+  - https://app.bitmod.io

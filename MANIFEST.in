@@ -1,0 +1,10 @@
+include LICENSE
+include README.md
+include pyproject.toml
+
+recursive-include core/bitmod *.py
+recursive-include core/bitmod *.pyi
+
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.egg-info
