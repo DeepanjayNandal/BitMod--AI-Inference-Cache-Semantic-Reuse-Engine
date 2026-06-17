@@ -1,0 +1,14 @@
+name: cite
+description: Retrieve and format a specific citation from source material
+triggers:
+  - "^cite\\b"
+  - "\\bcitation\\s+for\\b"
+  - "\\bcite\\s+(?:the|a|an)\\b"
+role: narrator
+compression: high
+token_budget: 1024
+model_tier: fallback
+cache_ttl: 86400
+cacheable: true
+template: "Provide the exact citation for: {query}"
+skip_llm: false

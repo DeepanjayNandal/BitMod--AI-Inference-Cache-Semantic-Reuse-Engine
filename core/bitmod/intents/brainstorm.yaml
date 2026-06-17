@@ -1,0 +1,13 @@
+name: brainstorm
+description: Generate creative ideas and explore possibilities
+triggers:
+  - "^brainstorm\\b"
+  - "\\bbrainstorm\\s+(?:ideas?|ways?|options?)\\b"
+role: explorer
+compression: none
+token_budget: 8192
+model_tier: primary
+cache_ttl: 0
+cacheable: false
+template: "Brainstorm: {query}"
+skip_llm: false

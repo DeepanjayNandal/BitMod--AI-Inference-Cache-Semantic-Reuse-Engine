@@ -1,0 +1,14 @@
+name: think
+description: Deep reasoning and step-by-step analysis
+triggers:
+  - "^think\\b"
+  - "\\bthink\\s+(?:about|through)\\b"
+  - "\\breason\\s+(?:about|through)\\b"
+role: reasoner
+compression: low
+token_budget: 8192
+model_tier: primary
+cache_ttl: 1800
+cacheable: true
+template: "Think through: {query}"
+skip_llm: false

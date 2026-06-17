@@ -1,0 +1,14 @@
+name: analyze
+description: Perform structured analysis of data, text, or concepts
+triggers:
+  - "^analyze\\b"
+  - "^analyse\\b"
+  - "\\banalyz(?:e|is)\\b"
+role: reasoner
+compression: standard
+token_budget: 8192
+model_tier: primary
+cache_ttl: 3600
+cacheable: true
+template: "Analyze: {query}"
+skip_llm: false

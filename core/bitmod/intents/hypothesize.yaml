@@ -1,0 +1,13 @@
+name: hypothesize
+description: Form hypotheses or explore what-if scenarios
+triggers:
+  - "^hypothesize\\b"
+  - "\\bwhat\\s+(?:if|would\\s+happen)\\b"
+role: reasoner
+compression: low
+token_budget: 8192
+model_tier: primary
+cache_ttl: 1800
+cacheable: true
+template: "Hypothesize about: {query}"
+skip_llm: false
