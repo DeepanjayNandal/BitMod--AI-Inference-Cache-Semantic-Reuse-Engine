@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "updated": "2026-03-25",
+    "source": "Provider pricing pages as of this date",
+    "notes": "Prices in USD per 1M tokens. Local models (Ollama) are $0."
+  },
+  "models": {
+    "gpt-4.1": [2.00, 8.00],
+    "gpt-4.1-mini": [0.40, 1.60],
+    "gpt-4.1-nano": [0.10, 0.40],
+    "gpt-4o": [2.50, 10.00],
+    "gpt-4o-mini": [0.15, 0.60],
+    "gpt-4-turbo": [10.00, 30.00],
+    "gpt-4": [30.00, 60.00],
+    "gpt-3.5-turbo": [0.50, 1.50],
+    "o1": [15.00, 60.00],
+    "o1-mini": [1.10, 4.40],
+    "o1-pro": [150.00, 600.00],
+    "o3": [10.00, 40.00],
+    "o3-mini": [1.10, 4.40],
+    "o4-mini": [1.10, 4.40],
+
+    "claude-opus-4-6": [15.00, 75.00],
+    "claude-sonnet-4-6": [3.00, 15.00],
+    "claude-haiku-4-5": [0.80, 4.00],
+    "claude-3.5-sonnet": [3.00, 15.00],
+    "claude-3-opus": [15.00, 75.00],
+    "claude-3-haiku": [0.25, 1.25],
+
+    "gemini-2.5-pro": [1.25, 10.00],
+    "gemini-2.5-flash": [0.15, 0.60],
+    "gemini-2.0-flash": [0.10, 0.40],
+    "gemini-1.5-pro": [1.25, 5.00],
+    "gemini-1.5-flash": [0.075, 0.30],
+
+    "llama-3.3-70b": [0.60, 0.60],
+    "llama-3.1-405b": [3.00, 3.00],
+    "llama-3.1-70b": [0.70, 0.80],
+    "llama-3.1-8b": [0.10, 0.10],
+    "llama3.2": [0.00, 0.00],
+    "llama3": [0.00, 0.00],
+
+    "deepseek-v3": [0.27, 1.10],
+    "deepseek-r1": [0.55, 2.19],
+
+    "mistral-large": [2.00, 6.00],
+    "mistral-small": [0.20, 0.60],
+    "mixtral-8x7b": [0.50, 0.50],
+
+    "command-r-plus": [2.50, 10.00],
+    "command-r": [0.15, 0.60],
+
+    "qwen-2.5-72b": [0.60, 0.60],
+    "qwen-2.5-7b": [0.10, 0.10],
+
+    "_default": [0.50, 1.50]
+  }
+}
