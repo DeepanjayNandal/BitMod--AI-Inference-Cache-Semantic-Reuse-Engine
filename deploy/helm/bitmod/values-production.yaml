@@ -1,0 +1,110 @@
+# BitMod — Production Environment Values
+#
+# Usage:
+#   helm install bitmod ./deploy/helm/bitmod -f deploy/helm/bitmod/values-production.yaml
+#
+# Prerequisites:
+#   - PostgreSQL instance provisioned
+#   - kubectl create secret generic bitmod-db --from-literal=password='...'
+#   - kubectl create secret generic bitmod-llm --from-literal=ANTHROPIC_API_KEY='...'
+#   - TLS cert-manager or pre-provisioned secret
+
+image:
+  pullPolicy: Always
+
+gateway:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 1Gi
+
+chat:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+# PostgreSQL required in production
+database:
+  backend: postgresql
+  postgresql:
+    enabled: true
+    host: ""          # REQUIRED — set via --set or wrapper values
+    port: 5432
+    database: bitmod
+    username: bitmod
+    existingSecret: bitmod-db
+
+# Redis required for distributed rate limiting with multiple replicas
+redis:
+  enabled: true
+  host: ""            # REQUIRED — set via --set or wrapper values
+  port: 6379
+
+# LLM secrets
+llm:
+  existingSecret: bitmod-llm
+
+# JSON structured logging
+observability:
+  jsonLogs: true
+  metrics: true
+  otel:
+    enabled: false    # Enable when OTLP collector is available
+
+# Strict rate limits
+rateLimits:
+  enabled: true
+  requestsPerMinute: 60
+
+# Strict CORS — set to your actual domain
+cors:
+  origins: ""         # REQUIRED — set to your domain(s)
+  strict: true
+
+# Auth
+auth:
+  enabled: true
+  autoGenerateKey: true
+
+# Ingress with TLS
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "60"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: ""        # REQUIRED — set to your domain
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: bitmod-tls
+      hosts:
+        - ""          # REQUIRED — set to your domain
+
+# PDB — protect availability during rollouts
+pdb:
+  enabled: true
+  gateway:
+    minAvailable: 2
+  chat:
+    minAvailable: 1
+
+# Production env vars
+extraEnv:
+  BITMOD_LOG_LEVEL: INFO
+  BITMOD_LOG_JSON: "true"
+  BITMOD_ENCRYPTION_ENABLED: "true"

@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bitmod.fullname" . }}-chat
+  labels:
+    {{- include "bitmod.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chat
+spec:
+  replicas: {{ .Values.chat.replicas }}
+  selector:
+    matchLabels:
+      {{- include "bitmod.chat.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "bitmod.chat.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "bitmod.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: chat
+          image: "{{ .Values.image.repository }}-chat:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.chat.port }}
+              protocol: TCP
+          env:
+            - name: BITMOD_CHAT_PORT
+              value: {{ .Values.chat.port | quote }}
+            - name: BITMOD_CONFIG_PATH
+              value: /app/config/bitmod.yaml
+            {{- if eq .Values.database.backend "sqlite" }}
+            - name: BITMOD_SQLITE_PATH
+              value: /app/data/bitmod.db
+            {{- end }}
+            {{- if .Values.database.postgresql.enabled }}
+            - name: BITMOD_DB_BACKEND
+              value: postgresql
+            - name: BITMOD_DB_HOST
+              value: {{ .Values.database.postgresql.host | quote }}
+            - name: BITMOD_DB_PORT
+              value: {{ .Values.database.postgresql.port | quote }}
+            - name: BITMOD_DB_NAME
+              value: {{ .Values.database.postgresql.database | quote }}
+            - name: BITMOD_DB_USER
+              value: {{ .Values.database.postgresql.username | quote }}
+            - name: BITMOD_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bitmod.dbSecretName" . }}
+                  key: password
+            {{- end }}
+            - name: JSON_LOGS
+              value: {{ .Values.observability.jsonLogs | quote }}
+            - name: METRICS_ENABLED
+              value: {{ .Values.observability.metrics | quote }}
+            {{- if .Values.observability.otel.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.otel.endpoint | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "bitmod.llmSecretName" . }}
+                optional: true
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.chat.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            {{- if eq .Values.database.backend "sqlite" }}
+            - name: data
+              mountPath: /app/data
+            {{- end }}
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "bitmod.fullname" . }}-config
+        {{- if eq .Values.database.backend "sqlite" }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "bitmod.fullname" . }}-data
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

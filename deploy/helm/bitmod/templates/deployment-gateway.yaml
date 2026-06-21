@@ -1,0 +1,159 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bitmod.fullname" . }}-gateway
+  labels:
+    {{- include "bitmod.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      {{- include "bitmod.gateway.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "bitmod.gateway.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "bitmod.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: gateway
+          image: "{{ .Values.image.repository }}-gateway:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.gateway.port }}
+              protocol: TCP
+          env:
+            - name: BITMOD_GATEWAY_PORT
+              value: {{ .Values.gateway.port | quote }}
+            - name: CHAT_SERVICE_URL
+              value: "http://{{ include "bitmod.fullname" . }}-chat:{{ .Values.chat.port }}"
+            - name: BITMOD_CONFIG_PATH
+              value: /app/config/bitmod.yaml
+            {{- if eq .Values.database.backend "sqlite" }}
+            - name: BITMOD_SQLITE_PATH
+              value: /app/data/bitmod.db
+            {{- end }}
+            {{- if .Values.database.postgresql.enabled }}
+            - name: BITMOD_DB_BACKEND
+              value: postgresql
+            - name: BITMOD_DB_HOST
+              value: {{ .Values.database.postgresql.host | quote }}
+            - name: BITMOD_DB_PORT
+              value: {{ .Values.database.postgresql.port | quote }}
+            - name: BITMOD_DB_NAME
+              value: {{ .Values.database.postgresql.database | quote }}
+            - name: BITMOD_DB_USER
+              value: {{ .Values.database.postgresql.username | quote }}
+            - name: BITMOD_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bitmod.dbSecretName" . }}
+                  key: password
+            {{- end }}
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            {{- end }}
+            {{- if .Values.cors.origins }}
+            - name: CORS_ORIGINS
+              value: {{ .Values.cors.origins | quote }}
+            {{- end }}
+            - name: CORS_STRICT
+              value: {{ .Values.cors.strict | quote }}
+            - name: RATE_LIMIT_ENABLED
+              value: {{ .Values.rateLimits.enabled | quote }}
+            - name: RATE_LIMIT_RPM
+              value: {{ .Values.rateLimits.requestsPerMinute | quote }}
+            - name: JSON_LOGS
+              value: {{ .Values.observability.jsonLogs | quote }}
+            - name: METRICS_ENABLED
+              value: {{ .Values.observability.metrics | quote }}
+            {{- if .Values.observability.otel.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.otel.endpoint | quote }}
+            {{- end }}
+            {{- if .Values.auth.enabled }}
+            - name: BITMOD_AUTH_ENABLED
+              value: "true"
+            - name: BITMOD_ADMIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bitmod.authSecretName" . }}
+                  key: admin-api-key
+                  optional: true
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "bitmod.llmSecretName" . }}
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            {{- if eq .Values.database.backend "sqlite" }}
+            - name: data
+              mountPath: /app/data
+            {{- end }}
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "bitmod.fullname" . }}-config
+        {{- if eq .Values.database.backend "sqlite" }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "bitmod.fullname" . }}-data
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

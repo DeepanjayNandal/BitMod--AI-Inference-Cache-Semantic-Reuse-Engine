@@ -1,0 +1,27 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "bitmod.fullname" . }}-gateway
+  labels:
+    {{- include "bitmod.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  minAvailable: {{ .Values.pdb.gateway.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "bitmod.gateway.selectorLabels" . | nindent 6 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "bitmod.fullname" . }}-chat
+  labels:
+    {{- include "bitmod.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chat
+spec:
+  minAvailable: {{ .Values.pdb.chat.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "bitmod.chat.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bitmod.fullname" . }}-gateway
+  labels:
+    {{- include "bitmod.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.gateway.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "bitmod.gateway.selectorLabels" . | nindent 4 }}

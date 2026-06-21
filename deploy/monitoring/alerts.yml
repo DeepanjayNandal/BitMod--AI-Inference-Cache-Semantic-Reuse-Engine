@@ -1,0 +1,91 @@
+groups:
+  - name: bitmod
+    rules:
+      - alert: HighErrorRate
+        expr: >
+          rate(bitmod_requests_total{status_code=~"5.."}[5m])
+          / rate(bitmod_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate (> 5%)"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: HighLatency
+        expr: >
+          histogram_quantile(0.99, rate(bitmod_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99 latency above 5 seconds"
+          description: "P99 request latency is {{ $value | humanizeDuration }} on endpoint {{ $labels.endpoint }}."
+
+      - alert: AuthFailureSpike
+        expr: rate(bitmod_security_events_total{event_type="auth_failure"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Auth failure spike (> 10/min)"
+          description: "Auth failures running at {{ $value | humanize }}/s over the last 5 minutes."
+
+      - alert: RateLimitSaturation
+        expr: rate(bitmod_security_events_total{event_type="rate_limited"}[5m]) > 50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate limiting (> 50/min)"
+          description: "Rate-limited requests at {{ $value | humanize }}/s over the last 5 minutes."
+
+      - alert: ServiceDown
+        expr: up{job=~"bitmod.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BitMod service {{ $labels.instance }} is down"
+          description: "Target {{ $labels.instance }} in job {{ $labels.job }} has been down for more than 1 minute."
+
+      - alert: CacheHitRateDrop
+        expr: >
+          rate(bitmod_cache_misses_total[15m])
+          / (rate(bitmod_cache_hits_total[15m]) + rate(bitmod_cache_misses_total[15m])) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache miss rate above 80%"
+          description: "Cache miss ratio is {{ $value | humanizePercentage }} over the last 15 minutes."
+
+      - alert: LLMLatencyHigh
+        expr: >
+          histogram_quantile(0.95, rate(bitmod_llm_latency_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM P95 latency above 30 seconds"
+          description: "Provider {{ $labels.provider }} model {{ $labels.model }} P95 latency is {{ $value | humanizeDuration }}."
+
+      - alert: LLMErrorRate
+        expr: >
+          rate(bitmod_llm_request_total{status="error"}[5m])
+          / rate(bitmod_llm_request_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM error rate above 10%"
+          description: "Provider {{ $labels.provider }} error rate is {{ $value | humanizePercentage }}."
+
+      - alert: InjectionAttempts
+        expr: rate(bitmod_security_events_total{event_type="injection_blocked"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Injection attempts detected (> 5/min)"
+          description: "Blocked injection attempts at {{ $value | humanize }}/s."

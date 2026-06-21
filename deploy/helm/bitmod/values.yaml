@@ -1,0 +1,121 @@
+# BitMod Helm Chart Values
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bitmoderator/bitmod
+  tag: latest
+  pullPolicy: IfNotPresent
+
+gateway:
+  port: 8000
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+chat:
+  port: 8001
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 1Gi
+
+# Database — each deployment gets its own isolated instance
+database:
+  # "sqlite" = ephemeral (PVC-backed), "postgresql" = managed
+  backend: sqlite
+  sqlite:
+    storageSize: 1Gi
+    storageClass: ""  # uses default
+  postgresql:
+    enabled: false
+    host: ""
+    port: 5432
+    database: bitmod
+    existingSecret: ""  # secret with 'password' key
+    username: bitmod
+
+# LLM Configuration
+llm:
+  primary: ollama
+  primaryModel: llama3.2
+  fallback: ollama
+  fallbackModel: llama3.2
+  # API keys via secrets
+  existingSecret: ""  # secret with provider API keys
+
+# Embeddings
+embedding:
+  provider: local
+  model: sentence-transformers/all-MiniLM-L6-v2
+
+# Redis (optional, for distributed rate limiting)
+redis:
+  enabled: false
+  host: ""
+  port: 6379
+
+# Ingress
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: bitmod.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Auth
+auth:
+  enabled: true
+  # Auto-generate admin key on first install
+  autoGenerateKey: true
+
+# Observability
+observability:
+  jsonLogs: true
+  metrics: true
+  otel:
+    enabled: false
+    endpoint: ""
+
+# Rate limiting
+rateLimits:
+  enabled: true
+  requestsPerMinute: 60
+
+# Security
+cors:
+  origins: ""  # comma-separated, empty = deny all
+  strict: true
+
+# Pod Disruption Budgets
+pdb:
+  enabled: true
+  gateway:
+    minAvailable: 1
+  chat:
+    minAvailable: 1
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+networkPolicy:
+  enabled: true

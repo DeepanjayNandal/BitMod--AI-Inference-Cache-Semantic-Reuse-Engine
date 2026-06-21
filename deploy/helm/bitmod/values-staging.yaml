@@ -1,0 +1,58 @@
+# BitMod — Staging Environment Values
+#
+# Usage:
+#   helm install bitmod ./deploy/helm/bitmod -f deploy/helm/bitmod/values-staging.yaml
+
+gateway:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+chat:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+# SQLite is fine for staging
+database:
+  backend: sqlite
+  postgresql:
+    enabled: false
+
+# Debug logging
+observability:
+  jsonLogs: true
+  metrics: true
+
+# Relaxed rate limits for testing
+rateLimits:
+  enabled: true
+  requestsPerMinute: 300
+
+# CORS — allow common staging origins
+cors:
+  origins: "http://localhost:3000,http://localhost:8000"
+  strict: false
+
+# No ingress — port-forward or internal LB
+ingress:
+  enabled: false
+
+# PDB off — single replicas
+pdb:
+  enabled: false
+
+# Extra env vars injected via configmap overrides
+extraEnv:
+  BITMOD_LOG_LEVEL: DEBUG
+  BITMOD_LOG_JSON: "true"

@@ -1,0 +1,112 @@
+# BitMod — Local Development Docker Compose
+#
+# Usage:
+#   docker compose -f deploy/docker-compose.yaml up
+#   docker compose -f deploy/docker-compose.yaml --profile postgres up
+#   docker compose -f deploy/docker-compose.yaml --profile redis up
+#   docker compose -f deploy/docker-compose.yaml --profile postgres --profile redis up
+
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: services/gateway/Dockerfile
+    container_name: bitmod-gateway
+    env_file:
+      - ../.env
+    environment:
+      CHAT_SERVICE_URL: http://bitmod-chat:8001
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:8000"
+      BITMOD_SQLITE_PATH: /app/data/bitmod.db
+      BITMOD_CONFIG_PATH: /app/config/bitmod.yaml
+    volumes:
+      - bitmod_data:/app/data
+      - ../bitmod.yaml:/app/config/bitmod.yaml:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      chat:
+        condition: service_healthy
+    networks:
+      - bitmod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  chat:
+    build:
+      context: ..
+      dockerfile: services/chat/Dockerfile
+    container_name: bitmod-chat
+    env_file:
+      - ../.env
+    environment:
+      BITMOD_SQLITE_PATH: /app/data/bitmod.db
+      BITMOD_CONFIG_PATH: /app/config/bitmod.yaml
+    volumes:
+      - bitmod_data:/app/data
+      - ../bitmod.yaml:/app/config/bitmod.yaml:ro
+    # No port exposed — accessed only via gateway on the internal network
+    networks:
+      - bitmod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # Optional: PostgreSQL + pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: bitmod-postgres
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: bitmod
+      POSTGRES_PASSWORD: bitmod_dev
+      POSTGRES_DB: bitmod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bitmod -d bitmod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bitmod
+    restart: unless-stopped
+
+  # Optional: Redis for rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: bitmod-redis
+    profiles: ["redis"]
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru --requirepass bitmod_dev
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - bitmod
+    restart: unless-stopped
+
+volumes:
+  bitmod_data:
+  postgres_data:
+  redis_data:
+
+networks:
+  bitmod:
+    driver: bridge

@@ -1,0 +1,50 @@
+
+BitMod has been deployed successfully.
+
+{{- if .Values.auth.enabled }}
+{{- if .Values.auth.autoGenerateKey }}
+
+1. Get your admin API key:
+
+   kubectl get secret {{ include "bitmod.authSecretName" . }} -n {{ .Release.Namespace }} \
+     -o jsonpath='{.data.admin-api-key}' | base64 -d; echo
+
+{{- end }}
+{{- end }}
+
+2. Access the gateway:
+
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+
+   # Port-forward to your local machine:
+   kubectl port-forward svc/{{ include "bitmod.fullname" . }}-gateway {{ .Values.gateway.port }}:{{ .Values.gateway.port }} -n {{ .Release.Namespace }}
+
+   # Then access at:
+   http://localhost:{{ .Values.gateway.port }}
+{{- end }}
+
+3. Verify the deployment:
+
+   curl http://localhost:{{ .Values.gateway.port }}/health
+
+4. Configure the BitMod SDK:
+
+   from bitmod import BitMod
+   bm = BitMod(
+       base_url="http://localhost:{{ .Values.gateway.port }}",
+       api_key="<your-admin-api-key>"
+   )
+
+5. Database backend: {{ .Values.database.backend }}
+{{- if eq .Values.database.backend "sqlite" }}
+   Data is stored on PVC: {{ include "bitmod.fullname" . }}-data
+{{- end }}
+{{- if .Values.database.postgresql.enabled }}
+   Connected to PostgreSQL at {{ .Values.database.postgresql.host }}:{{ .Values.database.postgresql.port }}
+{{- end }}
+
+For more information, visit https://bitmod.io/docs

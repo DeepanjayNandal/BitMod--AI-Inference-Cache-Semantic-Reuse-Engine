@@ -1,0 +1,86 @@
+{{- if .Values.database.postgresql.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "bitmod.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "bitmod.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "bitmod.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      serviceAccountName: {{ include "bitmod.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}-chat:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              from bitmod.migrations import MigrationRunner
+              from bitmod.db import create_backend
+              backend = create_backend()
+              runner = MigrationRunner(backend)
+              with backend.session() as session:
+                  applied = runner.migrate(session)
+                  print(f"Applied {len(applied)} migration(s)")
+          env:
+            - name: BITMOD_DB_BACKEND
+              value: postgresql
+            - name: BITMOD_DB_HOST
+              value: {{ .Values.database.postgresql.host | quote }}
+            - name: BITMOD_DB_PORT
+              value: {{ .Values.database.postgresql.port | quote }}
+            - name: BITMOD_DB_NAME
+              value: {{ .Values.database.postgresql.database | quote }}
+            - name: BITMOD_DB_USER
+              value: {{ .Values.database.postgresql.username | quote }}
+            - name: BITMOD_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bitmod.dbSecretName" . }}
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
