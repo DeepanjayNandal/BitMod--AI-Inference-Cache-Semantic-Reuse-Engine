@@ -1,0 +1,30 @@
+Cloud Computing Architecture and Services
+
+Cloud computing is the delivery of computing services including servers, storage, databases, networking, software, analytics, and intelligence over the Internet ("the cloud") to offer faster innovation, flexible resources, and economies of scale.
+
+Service Models:
+
+Infrastructure as a Service (IaaS) provides virtualized computing resources over the internet. Users can rent virtual machines, storage, and networking on a pay-as-you-go basis. Major IaaS providers include Amazon Web Services (AWS), Microsoft Azure, and Google Cloud Platform (GCP). IaaS gives organizations the highest level of flexibility and management control over their IT resources.
+
+Platform as a Service (PaaS) provides a platform allowing customers to develop, run, and manage applications without the complexity of building and maintaining the infrastructure. Examples include Google App Engine, Heroku, and AWS Elastic Beanstalk. PaaS is designed to support the complete web application lifecycle: building, testing, deploying, managing, and updating.
+
+Software as a Service (SaaS) delivers software applications over the internet on a subscription basis. Users can access SaaS applications through a web browser without installing or maintaining software. Examples include Salesforce, Google Workspace, Microsoft 365, and Slack. SaaS eliminates the need for organizations to install and run applications on their own computers or data centers.
+
+Cloud Deployment Models:
+
+Public Cloud: Services are delivered over the public internet and shared across multiple organizations. This is the most common deployment model offering the greatest level of efficiency in shared resources.
+
+Private Cloud: Cloud infrastructure is provisioned for exclusive use by a single organization. It can be managed by the organization itself or by a third party, and can exist on or off premises.
+
+Hybrid Cloud: Combines public and private clouds, allowing data and applications to be shared between them. This provides greater flexibility, more deployment options, and helps optimize existing infrastructure, security, and compliance.
+
+Multi-Cloud: Uses multiple cloud computing services from different providers. Organizations adopt multi-cloud strategies to avoid vendor lock-in, optimize costs, and leverage best-of-breed services from different providers.
+
+Key cloud computing metrics include:
+- Availability: Measured in "nines" (99.99% = "four nines" = 52.56 minutes downtime/year)
+- Latency: Time for data to travel between user and cloud service (typically 20-100ms)
+- Throughput: Amount of data transferred per unit of time
+- Cost: Pay-per-use pricing models reduce capital expenditure
+- Scalability: Ability to increase or decrease resources based on demand
+
+The global cloud computing market size was $545.8 billion in 2023 and is expected to reach $2.3 trillion by 2032.

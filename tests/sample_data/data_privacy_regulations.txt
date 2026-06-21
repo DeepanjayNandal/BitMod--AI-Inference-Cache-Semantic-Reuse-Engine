@@ -1,0 +1,53 @@
+Data Privacy Regulations and Compliance
+
+General Data Protection Regulation (GDPR):
+
+The GDPR is a comprehensive data privacy law enacted by the European Union in 2018. It applies to all organizations processing personal data of EU residents, regardless of where the organization is located. Key provisions include:
+
+Data Subject Rights:
+- Right to Access: Individuals can request copies of their personal data
+- Right to Rectification: Individuals can request correction of inaccurate data
+- Right to Erasure ("Right to be Forgotten"): Individuals can request deletion of their data
+- Right to Data Portability: Individuals can receive their data in a machine-readable format
+- Right to Object: Individuals can object to processing of their data
+- Right to Restrict Processing: Individuals can request limitation of data processing
+
+Legal Bases for Processing:
+1. Consent: Freely given, specific, informed, and unambiguous
+2. Contract: Necessary for performing a contract with the data subject
+3. Legal Obligation: Required by law
+4. Vital Interests: Necessary to protect someone's life
+5. Public Task: Necessary for official functions or tasks in the public interest
+6. Legitimate Interests: Necessary for legitimate purposes unless overridden by data subject rights
+
+Penalties: Up to 4% of annual global turnover or 20 million euros, whichever is higher. Notable fines include Amazon (746 million euros, 2021), Meta (1.2 billion euros, 2023), and Google (50 million euros, 2019).
+
+California Consumer Privacy Act (CCPA) / CPRA:
+
+The CCPA, effective January 2020 and amended by CPRA in 2023, provides California residents with rights regarding their personal information. Key provisions:
+
+- Right to Know: What personal information is collected and how it's used
+- Right to Delete: Request deletion of personal information
+- Right to Opt-Out: Opt out of sale or sharing of personal information
+- Right to Non-Discrimination: Equal service regardless of privacy choices
+- Right to Correct: Request correction of inaccurate information (added by CPRA)
+- Right to Limit Use of Sensitive Information (added by CPRA)
+
+Applies to businesses with annual gross revenue over $25 million, or that buy/sell personal information of 100,000+ consumers, or derive 50%+ of revenue from selling personal information.
+
+Health Insurance Portability and Accountability Act (HIPAA):
+
+HIPAA establishes standards for protecting sensitive patient health information (PHI). The Privacy Rule sets standards for who may access PHI. The Security Rule sets standards for ensuring confidentiality, integrity, and availability of electronic PHI (ePHI).
+
+Protected Health Information includes: names, dates, phone numbers, email addresses, Social Security numbers, medical records, health plan numbers, and biometric identifiers.
+
+HIPAA violations can result in fines ranging from $100 to $50,000 per violation, with a maximum of $1.5 million per year for each violation category.
+
+Emerging Privacy Regulations:
+
+Brazil's LGPD (Lei Geral de Protecao de Dados): Similar to GDPR, effective since 2020
+China's PIPL (Personal Information Protection Law): Effective since November 2021
+India's DPDPA (Digital Personal Data Protection Act): Enacted in 2023
+Virginia's VCDPA, Colorado's CPA, Connecticut's CTDPA: US state-level privacy laws
+
+The global data privacy software market is expected to reach $25.85 billion by 2029, reflecting growing organizational investment in privacy compliance.

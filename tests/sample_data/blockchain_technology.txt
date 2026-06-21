@@ -1,0 +1,36 @@
+Blockchain Technology and Distributed Ledger Systems
+
+A blockchain is a distributed, immutable ledger that records transactions across a network of computers. Each block contains a cryptographic hash of the previous block, a timestamp, and transaction data. Once recorded, the data in any given block cannot be altered retroactively without alteration of all subsequent blocks.
+
+Consensus Mechanisms:
+
+Proof of Work (PoW): Miners compete to solve complex mathematical puzzles to validate transactions and create new blocks. Bitcoin uses PoW, consuming approximately 150 TWh of electricity annually (comparable to Argentina). PoW provides strong security but has significant environmental concerns.
+
+Proof of Stake (PoS): Validators are chosen to create new blocks based on the amount of cryptocurrency they hold and are willing to "stake" as collateral. Ethereum transitioned from PoW to PoS in September 2022 ("The Merge"), reducing energy consumption by approximately 99.95%.
+
+Delegated Proof of Stake (DPoS): Token holders vote for a limited number of delegates who validate transactions. Used by EOS, Tron, and Lisk. DPoS offers higher transaction throughput but at the cost of some decentralization.
+
+Smart Contracts:
+
+Smart contracts are self-executing programs stored on a blockchain that automatically enforce the terms of an agreement when predetermined conditions are met. Ethereum introduced smart contracts in 2015, enabling decentralized applications (dApps) and decentralized finance (DeFi).
+
+Key properties of smart contracts:
+- Deterministic: Same input always produces the same output
+- Immutable: Cannot be changed once deployed (upgradeable proxy patterns exist)
+- Transparent: Code is publicly visible and auditable
+- Trustless: No intermediary needed for execution
+
+DeFi (Decentralized Finance):
+
+DeFi refers to financial services built on blockchain technology that operate without traditional intermediaries like banks. Total Value Locked (TVL) in DeFi protocols reached $50 billion in 2024. Key DeFi categories include:
+
+1. Lending/Borrowing: Aave, Compound — algorithmic interest rates based on supply/demand
+2. Decentralized Exchanges (DEX): Uniswap, SushiSwap — automated market makers (AMMs)
+3. Stablecoins: USDC, DAI — cryptocurrency pegged to fiat currency value
+4. Yield Farming: Providing liquidity to earn rewards and governance tokens
+
+Enterprise Blockchain:
+
+Hyperledger Fabric: Permissioned blockchain framework hosted by the Linux Foundation. Used by IBM, Walmart (supply chain tracking), and Maersk (shipping logistics). Supports pluggable consensus and membership services.
+
+Enterprise use cases include supply chain management, cross-border payments, identity verification, healthcare records, and intellectual property protection. The enterprise blockchain market is projected to reach $246 billion by 2032.

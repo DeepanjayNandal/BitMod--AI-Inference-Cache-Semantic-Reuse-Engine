@@ -1,0 +1,31 @@
+Cybersecurity Fundamentals and Best Practices
+
+Cybersecurity is the practice of protecting systems, networks, and programs from digital attacks. These cyberattacks are usually aimed at accessing, changing, or destroying sensitive information, extorting money from users, or interrupting normal business processes.
+
+The CIA Triad:
+
+Confidentiality ensures that information is accessible only to those authorized to have access. Encryption, access controls, and authentication mechanisms are primary tools for maintaining confidentiality. Data classification helps organizations determine the appropriate level of protection for different types of information.
+
+Integrity ensures that information is accurate, complete, and has not been modified by unauthorized parties. Hash functions, digital signatures, and checksums help verify data integrity. Version control systems and audit logs provide traceability of changes.
+
+Availability ensures that authorized users have reliable and timely access to information and resources. Redundancy, failover mechanisms, load balancing, and disaster recovery plans help maintain availability. DDoS protection and capacity planning are critical components.
+
+Common Attack Vectors:
+
+Phishing: Social engineering attacks that trick users into revealing sensitive information or installing malware. Spear phishing targets specific individuals with personalized messages. Business email compromise (BEC) specifically targets executives and finance departments.
+
+Ransomware: Malware that encrypts files and demands payment for decryption keys. Notable examples include WannaCry (2017), NotPetya (2017), and Colonial Pipeline (2021). The average ransomware payment increased to $1.54 million in 2023.
+
+SQL Injection: Attackers insert malicious SQL code into application queries to manipulate databases. Parameterized queries and prepared statements are the primary defense. Input validation and WAFs provide additional protection layers.
+
+Zero-Day Exploits: Attacks targeting previously unknown vulnerabilities before patches are available. Threat intelligence and behavioral analysis help detect zero-day attacks. Bug bounty programs incentivize responsible disclosure.
+
+Security Frameworks:
+
+NIST Cybersecurity Framework: Provides a policy framework of computer security guidance for how private sector organizations can assess and improve their ability to prevent, detect, and respond to cyber attacks. The framework consists of five core functions: Identify, Protect, Detect, Respond, and Recover.
+
+ISO 27001: International standard for information security management systems (ISMS). It provides a systematic approach to managing sensitive company information, ensuring it remains secure through risk management processes.
+
+OWASP Top 10: A standard awareness document for web application security, representing a broad consensus about the most critical security risks. Updated periodically, the 2021 version includes Broken Access Control, Cryptographic Failures, and Injection as top risks.
+
+The global cybersecurity market is projected to reach $538.3 billion by 2030, with an average cost of a data breach at $4.45 million in 2023.
