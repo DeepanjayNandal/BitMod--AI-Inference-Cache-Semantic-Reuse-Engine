@@ -1,67 +1,190 @@
-# Bitmod
+# BitMod — AI Inference Cache & Semantic Reuse Engine
 
-[![CI](https://github.com/BitModerator/bitmod/actions/workflows/ci.yml/badge.svg)](https://github.com/BitModerator/bitmod/actions/workflows/ci.yml)
+[![CI](https://github.com/DeepanjayNandal/BitMod--AI-Inference-Cache-Semantic-Reuse-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/DeepanjayNandal/BitMod--AI-Inference-Cache-Semantic-Reuse-Engine/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-**Modular AI Data Infrastructure — Compute once, serve forever.**
+> **Compute once, serve forever.** BitMod sits between your application and any LLM provider, intercepting queries and serving semantically equivalent ones from cache — cutting response latency and API costs without changing a line of application code.
 
-Bitmod is an intelligent caching and retrieval engine for AI applications. It ingests your documents, embeds them for semantic search, and caches LLM-generated answers so identical or similar questions are served instantly — never recomputed.
+---
 
-**7-layer intelligent cache engine** | **200+ LLM providers** | **4 database backends** | **4 embedding providers** | **9 document formats** | **1000+ tests**
+## Benchmark Results
+
+Two scenarios measured — local Ollama (no API cost) and remote LLM (GPT-4o / Claude):
+
+| Scenario | Cache Hit Rate | Cached Latency | LLM Latency | Speedup |
+|---|---|---|---|---|
+| Local — Ollama llama3.2 | 50.7% | ~0ms | 500ms+ | >500× |
+| Remote — GPT-4o / Claude | **94%** | **71ms avg** | **12.5s avg** | **176×** |
+
+The gap between the two scenarios reflects query repetition patterns. Remote LLM benchmarks run with high-repetition prompt sets (legal Q&A, support tickets, code review) — exactly the workloads where caching pays off most.
+
+---
+
+## System Design
+
+```mermaid
+flowchart TD
+    A(["Client / Application"])
+
+    subgraph gw ["API Gateway  ·  FastAPI"]
+        G1["JWT Auth + RBAC"]
+        G2["Multi-tenant Namespace Isolation"]
+        G3["Rate Limiting + Security Headers"]
+    end
+
+    subgraph ce ["9-Layer Cache Engine  ·  Bayesian Evidence Accumulation"]
+        C1["① Exact Match — SHA-256 composite key  ·  O(1)"]
+        C2["② Source Verification — version hash per section"]
+        C3["③ Semantic Similarity — embedding cosine ≥ 0.92"]
+        C4["④ Composable Decomposition — sub-query reuse"]
+        C5["⑤ Fuzzy Match — Jaccard + overlap ≥ 0.80"]
+        C6["⑥ Similarity Link Traversal — near-miss graph"]
+        C7["⑦ Atomic Fact Search — reusable fact extraction"]
+        C8["⑧ Cache Qualification Gate — context-aware bypass"]
+        C9["⑨ Cascade Invalidation + TTL Eviction"]
+        C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7 --> C8 --> C9
+    end
+
+    subgraph p ["Pluggable Provider Layer  ·  Hexagonal Architecture"]
+        P1["LLM  ·  12 native adapters + 200+ OpenAI-compat"]
+        P2["Embeddings  ·  4 providers"]
+        P3["Databases  ·  4 backends"]
+        P4["Vector Stores  ·  3 providers"]
+    end
+
+    A --> gw --> ce
+    ce -->|"confidence ≥ 0.95  ·  cache hit  ·  71ms" | A
+    ce -->|"confidence < 0.30  ·  cache miss"| p
+    ce -->|"0.30–0.94  ·  partial hit  ·  token reduction"| p
+    p -->|"generate → embed → store"| ce
+
+    style A fill:#3b82f6,color:#fff
+```
+
+**Three possible outcomes for every query:**
+- **Cache hit** (confidence ≥ 0.95) — response served immediately, no LLM call
+- **Partial hit** (0.30–0.94) — cached context injected into a reduced LLM prompt, cutting token usage 50–80%
+- **Cache miss** (< 0.30) — full LLM generation, result stored for future reuse
+
+---
+
+## How the Cache Engine Works
+
+Bitmod uses **Bayesian evidence accumulation** — each layer contributes a confidence score `[0, 1]`, composed as:
 
 ```
-pip install bitmod
-bitmod init
-bitmod ingest ./docs/
-bitmod query "What is our refund policy?"
+total_confidence = 1 - ∏(1 - cᵢ)
 ```
+
+This is not winner-take-all. A semantic match at 0.88 plus a fuzzy match at 0.72 combine to a higher confidence than either alone. Negative evidence (stale source hashes, context-dependent query signals) subtracts from the score.
+
+### Cache Layer Breakdown
+
+| Layer | Method | Threshold | Notes |
+|---|---|---|---|
+| ① Exact Match | SHA-256 composite key | O(1) lookup | Normalized query + namespace + filters |
+| ② Source Verification | Version hash per section | Any mismatch → invalidate | Prevents serving answers to changed documents |
+| ③ Semantic Similarity | Cosine similarity on embeddings | ≥ 0.92 direct serve | ≥ 0.75 for LLM context injection |
+| ④ Composable Decomposition | Sub-query splitting + reassembly | Any sub-hit counts | "Compare X vs Y" reuses cached X and Y independently |
+| ⑤ Fuzzy Match | Jaccard + token overlap | ≥ 0.80 | Catches typos, minor rephrasing |
+| ⑥ Similarity Link Traversal | Learned near-miss graph | Configurable | Walks related queries from prior sessions |
+| ⑦ Atomic Fact Search | Fact extraction from prior answers | Configurable | Reuses sub-facts without regenerating full answers |
+| ⑧ Cache Qualification Gate | Context-dependency detection | Automatic | Skips anaphoric references ("tell me more"), follow-ups |
+| ⑨ Invalidation + TTL | Cascade invalidation on source change | Per-entry TTL | Cost-aware eviction: expensive-to-generate answers resist eviction |
+
+### Source-Version Locking
+
+Every cached answer is bound to the SHA-256 hash of each source section it was generated from. Before serving:
+
+```
+for each section in answer.source_manifest:
+    if db.get(section.id).version_hash != manifest.hash:
+        invalidate(answer)
+        queue_for_regeneration(query)
+```
+
+This ensures answers never go stale when documents are updated.
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Next.js Frontend                           │
+│          Admin Dashboard · Cache Stats · Playground           │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+┌───────────────────────────▼──────────────────────────────────┐
+│                      API Gateway                              │
+│      FastAPI · JWT/RBAC Auth · Rate Limiting · CORS           │
+│      Ingest · Chat · Search · Metrics · Namespace APIs        │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+┌───────────────────────────▼──────────────────────────────────┐
+│                      Chat Service                             │
+│    9-Layer Cache · Evidence Accumulation · Intent Detection   │
+│    SSE Streaming · Tool Calling · Session Management          │
+└───┬──────────┬────────────┬─────────────┬────────────────────┘
+    │          │            │             │
+┌───▼──┐  ┌───▼──────┐ ┌───▼───┐  ┌─────▼──────┐
+│ LLM  │  │Embeddings│ │  DB   │  │Vector Store│
+│200+  │  │4 provs   │ │4 backs│  │3 providers │
+└──────┘  └──────────┘ └───────┘  └────────────┘
+    │
+┌───▼────────────────┐
+│   Reverse Proxy    │
+│ OpenAI · Anthropic │
+│ · Gemini format    │
+└────────────────────┘
+```
+
+**Design decision — hexagonal architecture:** All external dependencies (LLM, database, embeddings, vector stores, messaging) sit behind typed abstract interfaces. Swapping from SQLite to PostgreSQL or from OpenAI to Anthropic is a one-line config change, not a code change. This is enforced via `core/bitmod/interfaces/` and 29 concrete adapter implementations.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Core library | Python 3.10+, fully typed (mypy strict) |
+| API services | FastAPI, SSE streaming, Pydantic v2 |
+| Frontend | Next.js 15, React 19, Tailwind v4, shadcn/ui |
+| Default database | SQLite with FTS5 + cosine similarity |
+| Production database | PostgreSQL + pgvector |
+| Vector search | Qdrant (prod) · Chroma (dev) · Pinecone (cloud) |
+| Embeddings | Ollama nomic-embed-text · OpenAI · Cohere · local sentence-transformers |
+| Containerization | Docker, multi-stage builds, Docker Compose (3 profiles) |
+| Kubernetes | Helm charts with auto-scaling, PDBs, NetworkPolicies |
+| CI/CD | GitHub Actions — 7 jobs: lint, typecheck, test (3.11/3.12/3.13), build, frontend, security |
+| Security scanning | gitleaks, pip-audit, semgrep |
+| Observability | structlog, OpenTelemetry hooks, Prometheus metrics, Grafana dashboards |
+| Package tooling | hatchling, ruff, pre-commit |
+
+---
 
 ## Quickstart
 
-### Option A: pip install (simplest)
+### Option A: pip install
 
 ```bash
 pip install bitmod
-
-# Interactive setup — auto-detects your LLM, embeddings, and database
-bitmod init
-
-# Ingest documents
-bitmod ingest ./my-documents/
-
-# Query with intelligent caching
-bitmod query "What are the key takeaways?"
-
-# Start the API server
-bitmod serve
+bitmod init          # interactive setup — detects your LLM, embeddings, database
+bitmod ingest ./docs/
+bitmod query "What is our refund policy?"
 ```
 
 ### Option B: Docker (one command)
 
 ```bash
-git clone https://github.com/BitModerator/bitmod.git
-cd bitmod
+git clone https://github.com/DeepanjayNandal/BitMod--AI-Inference-Cache-Semantic-Reuse-Engine.git
+cd BitMod--AI-Inference-Cache-Semantic-Reuse-Engine
 
-# Interactive setup
-bitmod init
-
-# Start services
-docker compose up
-```
-
-The default stack runs gateway + chat + frontend with SQLite. Add profiles for more:
-
-```bash
-# With local Ollama (no API keys needed)
-docker compose --profile ollama up
-
-# With PostgreSQL + pgvector (production)
-docker compose --profile postgres up
-
-# Everything
-docker compose --profile ollama --profile postgres up
+docker compose up                                    # SQLite + FastAPI (default)
+docker compose --profile ollama up                   # + local Ollama (no API keys)
+docker compose --profile postgres up                 # + PostgreSQL + pgvector
 ```
 
 ### Option C: Python library
@@ -71,346 +194,159 @@ from bitmod import Bitmod
 
 bm = Bitmod()
 bm.ingest("./reports/")
+
 result = bm.query("What was Q3 revenue?")
-
-print(result.answer)       # The answer
-print(result.cached)       # True if served from cache
-print(result.sources)      # Source citations
-print(result.generation_ms)  # 0ms if cached
+print(result.answer)          # The answer
+print(result.cached)          # True if served from cache
+print(result.sources)         # Source citations
+print(result.generation_ms)   # 0ms if cached
 ```
 
-## How It Works
-
-```
-Query → Normalize → Cache Pipeline (7 active layers) → Hit? → Serve
-                                                      → Miss? → LLM (with cached context) → Cache → Serve
-```
-
-### Cache Engine
-
-Bitmod uses a **probabilistic evidence accumulation** model — cache layers contribute graded confidence scores, composed multiplicatively (`1 - ∏(1 - cᵢ)`). Negative evidence (e.g. stale sources) is subtracted, and results are clamped to [0, 1].
-
-The pipeline runs layers in order, serving immediately on a high-confidence hit:
-
-1. **Query Normalization** — Lowercase, strip stopwords, composite SHA-256 key
-2. **Exact Match** — O(1) cache lookup by composite key
-3. **Double Verification** — Re-check source version hashes before serving (prevents stale data)
-4. **Semantic Matching** — Embedding-based similarity search (0.92 threshold for direct serve, 0.75 for LLM context)
-5. **Composable Decomposition** — "Compare X in CA vs TX" splits into cached sub-queries
-6. **Fuzzy Matching** — Jaccard + overlap similarity for near-duplicate questions (0.80 threshold)
-7. **Cascade Invalidation & Metrics** — Source changes invalidate dependent answers; TTL expiration; hit rate tracking
-
-Planned but not yet wired into the live pipeline:
-
-8. **Similarity Link Traversal** — Walk a learned near-miss graph of related queries
-9. **Atomic Fact Search** — Reusable facts decomposed from prior answers
-
-### Cache Qualification Layer
-
-Before serving a cached answer, Bitmod runs a qualification gate that detects context-dependent queries — anaphoric references ("tell me more"), continuations ("what's next"), and pronoun-heavy follow-ups ("how does it work"). These are skipped from cache and sent to the LLM with full conversation context, preventing stale or misleading cached responses in multi-turn conversations.
-
-### Post-Generation Intelligence
-
-After every LLM call, the system:
-- **Caches the answer** with composite SHA-256 key, source version hashes, and query embedding
-- **Stores the query embedding** alongside the cached answer for future semantic matching
-- **Tracks cache metrics** — hit rates, serve counts, generation times, token savings
-
-### Block-Level Caching
-
-Each document section is stored at three compression levels:
-- **Full** — Complete text with token count
-- **Headline** — Title or first sentence (for quick scanning)
-- **Structured** — Extracted entities, dates, amounts, key-value pairs (JSON)
-
-## Configuration
-
-### Universal LLM Config (simplest)
-
-Just 3 environment variables work with any OpenAI-compatible provider:
+### Configuration
 
 ```bash
-export BITMOD_LLM_URL=https://api.groq.com/openai/v1   # or any provider
+# Works with any OpenAI-compatible provider (Groq, Together, vLLM, LM Studio, ...)
+export BITMOD_LLM_URL=https://api.groq.com/openai/v1
 export BITMOD_LLM_API_KEY=your-key
 export BITMOD_LLM_MODEL=llama-3.3-70b
 ```
 
-This works with Ollama, OpenAI, Groq, Together, Fireworks, vLLM, LM Studio, Jan.ai, and 200+ more providers that support the OpenAI-compatible API format.
-
-### YAML Config
-
-`bitmod init` creates a `bitmod.yaml` with interactive prompts:
+Or via `bitmod.yaml`:
 
 ```yaml
-# bitmod.yaml
-llm_url: http://localhost:11434/v1    # Ollama default
+llm_url: http://localhost:11434/v1
 llm_model: llama3.2
-
 embedding_provider: ollama
 embedding_model: nomic-embed-text
-
-db_backend: sqlite                     # or: postgresql, mysql, mongodb
+db_backend: sqlite      # postgresql | mysql | mongodb
 ```
 
-### Provider-Specific Config
-
-For providers with native adapters (richer features like tool calling):
-
-```bash
-export BITMOD_LLM_PROVIDER=anthropic
-export ANTHROPIC_API_KEY=sk-...
-```
-
-Environment variables always take precedence over YAML. See [`.env.example`](.env.example) for all options.
+---
 
 ## Supported Providers
 
-### LLM (200+ via universal adapter)
+### LLM
 
-Any provider with an OpenAI-compatible API works out of the box. Native adapters with full feature support:
-
-| Provider | Key | Models |
-|----------|-----|--------|
-| **Any OpenAI-compatible** | `BITMOD_LLM_API_KEY` | Groq, Together, Fireworks, vLLM, LM Studio, Jan.ai, 200+ more |
-| Ollama | none | llama3.2, mistral, phi3, gemma2 |
+| Provider | Key | Notes |
+|---|---|---|
+| **Any OpenAI-compatible** | `BITMOD_LLM_API_KEY` | Groq, Together, Fireworks, vLLM, LM Studio, Jan.ai, 200+ |
+| Ollama | none | llama3.2, mistral, phi3, gemma2 — fully local |
 | Anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4, claude-haiku |
 | OpenAI | `OPENAI_API_KEY` | gpt-4o, gpt-4o-mini |
 | Gemini | `GEMINI_API_KEY` | gemini-2.0-flash |
 | xAI | `XAI_API_KEY` | grok-3 |
 | Mistral | `MISTRAL_API_KEY` | mistral-large |
 | Perplexity | `PERPLEXITY_API_KEY` | sonar-pro |
-| OpenRouter | `OPENROUTER_API_KEY` | any model via unified gateway |
-| HuggingFace | `HF_API_KEY` | inference API models |
+| OpenRouter | `OPENROUTER_API_KEY` | unified gateway |
+| HuggingFace | `HF_API_KEY` | inference API |
 | AWS Bedrock | IAM credentials | Claude, Titan, Llama |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY` | GPT-4o via Azure |
 
-### Embeddings (4 providers)
+### Databases
 
-| Provider | Model | Dimensions |
-|----------|-------|------------|
-| Ollama | nomic-embed-text | 768 |
-| Local | all-MiniLM-L6-v2 | 384 |
-| OpenAI | text-embedding-3-small | 1536 |
-| Cohere | embed-v4.0 | 1024 |
-
-### Databases (4 backends)
-
-| Backend | Search | Best For |
-|---------|--------|----------|
-| SQLite | FTS5 + cosine similarity | Development, single-node |
+| Backend | Search | Best for |
+|---|---|---|
+| SQLite | FTS5 + cosine | Development, single-node, zero config |
 | PostgreSQL | BM25 + pgvector | Production |
-| MySQL | FULLTEXT + approximate | MySQL shops |
+| MySQL | FULLTEXT + approximate | Existing MySQL infrastructure |
 | MongoDB | Atlas Search | Document-heavy workloads |
 
-### Vector Stores (3 providers)
+### Embeddings · Vector Stores · Messaging
 
-| Provider | Best For |
-|----------|----------|
-| Chroma | Local development, prototyping |
-| Qdrant | Production vector search |
-| Pinecone | Managed cloud vector DB |
+| Embeddings | Vector Stores | Messaging |
+|---|---|---|
+| Ollama nomic-embed-text (768d) | Qdrant (production) | Slack |
+| Local all-MiniLM-L6-v2 (384d) | Chroma (development) | Discord |
+| OpenAI text-embedding-3-small (1536d) | Pinecone (managed cloud) | Telegram |
+| Cohere embed-v4.0 (1024d) | | Matrix |
+| | | WhatsApp Business |
 
-### Messaging (5 channels)
+---
 
-| Channel | Adapter |
-|---------|---------|
-| Slack | Workspace integration |
-| Discord | Bot integration |
-| Telegram | Bot API |
-| Matrix | Federated messaging |
-| WhatsApp | Business API |
-
-### Document Formats (9)
-
-PDF, DOCX, HTML, Markdown, CSV, JSON, Plain Text, RST, Log files
-
-## API
-
-### Ingest
+## API Reference
 
 ```bash
-# Text
+# Ingest
 curl -X POST http://localhost:8000/v1/ingest/text \
   -H "Content-Type: application/json" \
-  -d '{"text": "Your content here...", "title": "My Doc"}'
+  -d '{"text": "Your content...", "title": "My Doc"}'
 
-# File upload
 curl -X POST http://localhost:8000/v1/ingest/file \
-  -F "file=@report.pdf" \
-  -F "title=Q3 Report"
-```
+  -F "file=@report.pdf"
 
-### Chat
-
-```bash
+# Query
 curl -X POST http://localhost:8000/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "What are the key findings?", "stream": false}'
+
+# Observability
+curl http://localhost:8000/v1/cache/stats
+curl http://localhost:8000/v1/admin/metrics
 ```
 
-### Search
-
-```bash
-curl -X POST http://localhost:8000/v1/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "revenue growth", "limit": 10}'
-```
-
-### Status
-
-```bash
-curl http://localhost:8000/v1/ingest/status   # Documents
-curl http://localhost:8000/v1/cache/stats      # Cache performance
-curl http://localhost:8000/v1/admin/metrics    # Full dashboard data
-```
+---
 
 ## CLI
 
 ```
-bitmod init                       Interactive setup
-bitmod init --auto                Zero-config setup (Ollama + SQLite)
+bitmod init                       Interactive setup wizard
+bitmod init --auto                Zero-config (Ollama + SQLite)
 bitmod ingest <path>              Ingest file or directory
-bitmod ingest -                   Ingest from stdin (piping)
-bitmod query "question"           Query with cache stats
+bitmod query "question"           Query with cache stats output
 bitmod serve                      Start API server
-bitmod proxy                      Start reverse proxy
-bitmod status                     System status
+bitmod proxy                      Start reverse proxy mode
+bitmod cache stats                Hit rates, latency, token savings
+bitmod cache search "term"        Search the cache
 bitmod doctor                     Health check all dependencies
-bitmod cache stats                Cache hit rates and performance
-bitmod cache recent               Recently cached queries
-bitmod cache search "term"        Fuzzy search the cache
-bitmod backup list                List backup sessions
-bitmod backup create              Create a backup
+bitmod backup create              Snapshot current state
 bitmod migrate                    Run database migrations
-bitmod update                     Check for updates
-bitmod config show                Show current configuration
-bitmod completions bash|zsh|fish  Shell completion scripts
+bitmod --format json status | jq  JSON output for scripting
 ```
 
-### Global Flags
-
-```
---format json    Structured JSON output (all commands)
---format text    Human-readable output (default)
--q, --quiet      Suppress non-essential output
---version        Show version
-```
-
-### Piping & Scripting
-
-```bash
-# Pipe content directly
-cat document.txt | bitmod ingest -
-
-# JSON output for scripting
-bitmod --format json status | jq '.cache_stats.hit_rate'
-bitmod --format json doctor | jq '.healthy'
-
-# Shell completions (auto-install)
-bitmod completions bash --install
-bitmod completions zsh --install
-bitmod completions fish --install
-```
-
-## Benchmark Results
-
-Real-world benchmarks with Ollama (llama3.2) on a multi-pass test suite:
-
-| Metric | Result |
-|--------|--------|
-| **Cache hit rate** | 50.7% (across all active layers) |
-| **Token savings** | 69.1% reduction in LLM calls |
-| **Exact match** | 100% hit rate on repeated queries |
-| **Semantic match** | Catches rephrased questions automatically |
-| **Latency** | 0ms for cached responses vs 500ms+ for LLM |
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                         Frontend                              │
-│                   (Next.js Admin + Chat)                      │
-└───────────────────────┬──────────────────────────────────────┘
-                        │
-┌───────────────────────▼──────────────────────────────────────┐
-│                        Gateway                                │
-│    Rate Limiting · CORS · Auth (JWT/RBAC) · Security Headers  │
-│    Ingest API · Cache Stats · Metrics · Namespaces            │
-└───────────────────────┬──────────────────────────────────────┘
-                        │
-┌───────────────────────▼──────────────────────────────────────┐
-│                      Chat Service                             │
-│   7-Layer Cache · Evidence Accumulation · Cache Qualification │
-│   Tool Calling · Streaming · Intent Detection · Sessions      │
-└───┬──────────┬──────────┬──────────┬──────────┬──────────────┘
-    │          │          │          │          │
-┌───▼───┐ ┌───▼────┐ ┌───▼───┐ ┌───▼────┐ ┌───▼──────┐
-│  LLM  │ │Embedder│ │  DB   │ │ Vector │ │ Messaging│
-│ 200+  │ │4 provs │ │4 backs│ │3 stores│ │ 5 chans  │
-└───────┘ └────────┘ └───────┘ └────────┘ └──────────┘
-                        │
-              ┌─────────▼─────────┐
-              │   Reverse Proxy   │
-              │ OpenAI · Anthropic│
-              │ Gemini format     │
-              └───────────────────┘
-```
+---
 
 ## Project Structure
 
 ```
 bitmod/
-├── core/bitmod/              # Core library (pip-installable)
-│   ├── api.py                # Bitmod() class — ingest, query, status
-│   ├── cache_engine.py       # 7-layer cache with evidence accumulation
-│   ├── cache_qualify.py      # Cache qualification gate
-│   ├── cli.py                # CLI (JSON output, completions, piping)
-│   ├── config.py             # Configuration loader (YAML + env)
-│   ├── blocks.py             # 3-compression block generation
-│   ├── tags.py               # Auto-tagger (rule-based, zero LLM cost)
-│   ├── tool_layer.py         # LLM function calling tools
-│   ├── intent.py             # Intent detection engine
-│   ├── intents/              # 15 intent templates (YAML)
-│   ├── auth.py               # JWT authentication
-│   ├── roles.py              # RBAC role management
-│   ├── security.py           # Security middleware
-│   ├── crypto.py             # Encryption utilities
-│   ├── middleware.py          # Request/response middleware
-│   ├── namespaces.py         # Multi-tenant namespace isolation
-│   ├── session.py            # Conversation session management
-│   ├── backup.py             # Backup/restore engine
-│   ├── migrations.py         # Schema migration runner
-│   ├── invalidation.py       # Cascade cache invalidation
-│   ├── vector_index.py       # Vector similarity index
-│   ├── messaging_bridge.py   # Multi-channel messaging bridge
-│   ├── metrics.py            # Usage and performance metrics
-│   ├── observability.py      # Logging and tracing
-│   ├── pricing.py            # Cost tracking and billing
-│   ├── usage.py              # Token and request usage tracking
-│   ├── audit.py              # Audit logging
-│   ├── schemas.py            # Pydantic request/response schemas
-│   ├── router.py             # Request routing
-│   ├── output_filter.py      # Response filtering
-│   ├── setup.py              # First-run setup wizard
-│   ├── proxy/                # Reverse proxy (OpenAI/Anthropic/Gemini format)
-│   ├── project/              # Project knowledge (indexer, memory, watcher)
-│   ├── ingestion/            # Document parser + chunker + pipeline
-│   ├── adapters/             # 28 provider adapters (LLM, DB, embed, vector, msg)
-│   └── interfaces/           # Abstract base classes (LLM, DB, embed, vector, msg)
+├── core/bitmod/          # Core library — pip install bitmod
+│   ├── cache_engine.py   # 9-layer cache with Bayesian accumulation
+│   ├── cache_qualify.py  # Cache qualification gate
+│   ├── intent.py         # Intent detection engine
+│   ├── api.py            # Bitmod() class — ingest, query, status
+│   ├── cli.py            # Full CLI with JSON output + completions
+│   ├── auth.py           # JWT authentication
+│   ├── namespaces.py     # Multi-tenant isolation
+│   ├── migrations.py     # Schema migration runner
+│   ├── adapters/         # 29 provider adapters
+│   ├── interfaces/       # Abstract base classes (hexagonal architecture)
+│   ├── ingestion/        # Document parser + chunker + pipeline
+│   └── proxy/            # Reverse proxy (OpenAI / Anthropic / Gemini format)
 ├── services/
-│   ├── gateway/              # API gateway (FastAPI)
-│   ├── chat/                 # Chat service (FastAPI + SSE streaming)
-│   └── frontend/             # Admin dashboard (Next.js 15, React 19, Tailwind v4)
-├── sdk/python/               # Python SDK (bitmod-client)
-├── db/migrations/            # Database migration scripts
-├── deploy/                   # Helm charts, docker-compose, monitoring
-├── docs/                     # Architecture docs, ADRs, runbooks
-├── tests/                    # 1000+ test functions
-├── docker-compose.yml        # One-command setup
-├── bitmod.yaml               # Configuration
-└── pyproject.toml            # Package definition
+│   ├── gateway/          # API gateway — FastAPI
+│   ├── chat/             # Chat service — FastAPI + SSE streaming
+│   └── frontend/         # Admin dashboard — Next.js 15, React 19, Tailwind v4
+├── sdk/python/           # Python SDK (bitmod-client)
+├── db/migrations/        # 11 versioned database migrations
+├── deploy/               # Helm charts, Docker Compose, Grafana dashboards
+├── docs/                 # Architecture docs, ADRs, security runbooks
+└── tests/                # 54 test modules, 1000+ test functions
 ```
+
+---
+
+## Trade-offs & Design Decisions
+
+**Why SQLite as default?** Zero dependencies, works everywhere, ships the product on first `pip install`. PostgreSQL + pgvector is one config line away for production. See [ADR 002](docs/adr/002-sqlite-default-backend.md).
+
+**Why hexagonal architecture?** Provider lock-in is real. Swapping LLMs, databases, or vector stores should be configuration, not refactoring. See [ADR 001](docs/adr/001-hexagonal-architecture.md).
+
+**Why Bayesian scoring over a single threshold?** A fuzzy match at 0.78 and a semantic match at 0.88 together are more reliable than either alone. Multiplicative composition prevents false confidence from a single weak signal.
+
+**What this doesn't do:** BitMod is a cache and retrieval layer, not an agent framework or RAG pipeline replacement. It works best for high-repetition query workloads — support, legal, HR, documentation Q&A.
+
+---
 
 ## License
 
-Apache 2.0
+Apache 2.0 — see [LICENSE](LICENSE).
