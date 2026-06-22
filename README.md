@@ -84,15 +84,20 @@ This is not winner-take-all. A semantic match at 0.88 plus a fuzzy match at 0.72
 
 | Layer | Method | Threshold | Notes |
 |---|---|---|---|
-| ① Exact Match | SHA-256 composite key | O(1) lookup | Normalized query + namespace + filters |
-| ② Source Verification | Version hash per section | Any mismatch → invalidate | Prevents serving answers to changed documents |
-| ③ Semantic Similarity | Cosine similarity on embeddings | ≥ 0.92 direct serve | ≥ 0.75 for LLM context injection |
-| ④ Composable Decomposition | Sub-query splitting + reassembly | Any sub-hit counts | "Compare X vs Y" reuses cached X and Y independently |
-| ⑤ Fuzzy Match | Jaccard + token overlap | ≥ 0.80 | Catches typos, minor rephrasing |
-| ⑥ Similarity Link Traversal | Learned near-miss graph | Configurable | Walks related queries from prior sessions |
-| ⑦ Atomic Fact Search | Fact extraction from prior answers | Configurable | Reuses sub-facts without regenerating full answers |
-| ⑧ Cache Qualification Gate | Context-dependency detection | Automatic | Skips anaphoric references ("tell me more"), follow-ups |
-| ⑨ Invalidation + TTL | Cascade invalidation on source change | Per-entry TTL | Cost-aware eviction: expensive-to-generate answers resist eviction |
+| ① Query Normalization | Lowercase + stopword removal + SHA-256 | Always runs | Composite key includes namespace, filters, role |
+| ② Exact Match | Key lookup against normalized composite | O(1) | First and fastest check |
+| ③ Source Verification | SHA-256 hash per source section | Any mismatch → invalidate | Prevents serving stale answers when documents change |
+| ④ Semantic Similarity | Cosine similarity on query embeddings | ≥ 0.92 direct serve / ≥ 0.75 context | Catches rephrased questions with same meaning |
+| ⑤ Composable Decomposition | Sub-query splitting + partial reassembly | Any sub-hit counts | "Compare X vs Y" reuses cached X and Y independently |
+| ⑥ Fuzzy Match | Jaccard + token overlap similarity | ≥ 0.85 | Catches typos and minor rephrasing |
+| ⑦ Similarity Link Traversal | 2-hop near-miss graph (bidirectional) | Configurable strength | Walks related queries learned across sessions |
+| ⑧ Atomic Fact Search | Embedding search over extracted facts | ≥ 0.80 similarity | Reuses sub-facts from prior answers without full regeneration |
+| ⑨ Session Context | Prior turn injection from session tracker | turn_count > 0 | Injects conversation history as partial cache evidence |
+
+**Supporting mechanisms (not lookup layers):**
+
+- **Cache Qualification Gate** — runs before serving from layers ② and ⑤, detects context-dependent queries ("tell me more", pronoun-heavy follow-ups) and routes them to the LLM instead
+- **Cascade Invalidation + TTL** — maintenance layer; source changes propagate invalidation to all dependent cached answers; cost-aware LRU eviction prioritises keeping expensive-to-regenerate entries
 
 ### Source-Version Locking
 
