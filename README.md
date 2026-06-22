@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/DeepanjayNandal/BitMod--AI-Inference-Cache-Semantic-Reuse-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/DeepanjayNandal/BitMod--AI-Inference-Cache-Semantic-Reuse-Engine/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
 > **Compute once, serve forever.** BitMod sits between your application and any LLM provider, intercepting queries and serving semantically equivalent ones from cache — cutting response latency and API costs without changing a line of application code.
@@ -354,4 +353,4 @@ bitmod/
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+© 2026 Deepanjay Nandal. All rights reserved.

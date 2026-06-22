@@ -119,6 +119,3 @@ Contributions adding tests for any of these are welcome.
 
 This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold this code.
 
-## License
-
-By contributing, you agree that your contributions will be licensed under the Apache License 2.0.
