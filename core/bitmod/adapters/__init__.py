@@ -178,5 +178,3 @@ def get_vector_store(config: VectorStoreConfig | None = None) -> VectorStore | N
             return PineconeAdapter(api_key=config.pinecone_api_key, index_name=config.pinecone_index)
         case _:
             raise ValueError(f"Unknown vector store: {config.store}")
-
-
