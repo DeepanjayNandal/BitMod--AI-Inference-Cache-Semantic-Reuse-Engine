@@ -410,7 +410,7 @@ class BitmodProxy:
                 }
             )
 
-        # --- Normalization & keying ---
+        # --- ① Normalization — composite SHA-256 key ---
         context_hash = ""
         if len(messages_for_context) > 1:
             history_str = json.dumps(messages_for_context[:-1], sort_keys=True)
@@ -449,7 +449,7 @@ class BitmodProxy:
 
             _ns_fallback = get_namespace_fallback(namespace_id, self._backend)
 
-        # --- Layer 1: Exact cache (definitive — short-circuits) ---
+        # --- ② Exact Match + ③ Source Verification (double_verify inside try_cache) ---
         cached = None
         if self._db_circuit.can_execute():
             try:
@@ -510,7 +510,7 @@ class BitmodProxy:
             )
         _step("exact_cache", "MISS", {})
 
-        # --- Layer 2: Semantic cache (collect ALL matches >= 0.75) ---
+        # --- ④ Semantic Similarity — embedding cosine search (collect ALL matches >= 0.75) ---
         if self._embedder and self._embed_circuit.can_execute():
             with self._backend.session() as session:
                 try:
@@ -581,7 +581,7 @@ class BitmodProxy:
         else:
             _step("semantic_cache", "SKIP", {})
 
-        # --- Layer 3: Composable cache (collect partial hits) ---
+        # --- ⑤ Composable Decomposition — sub-query reuse (collect partial hits) ---
         with self._backend.session() as session:
             composable = try_composable_cache(
                 self._backend,
@@ -641,7 +641,7 @@ class BitmodProxy:
             else:
                 _step("composable_cache", "MISS", {})
 
-        # --- Layer 4: Fuzzy match (contributes context, never serves directly) ---
+        # --- ⑥ Fuzzy Match — Jaccard + token overlap (contributes context, never serves directly) ---
         with self._backend.session() as session:
             fuzzy_hits = fuzzy_match(
                 self._backend,
@@ -666,7 +666,7 @@ class BitmodProxy:
             else:
                 _step("fuzzy_match", "MISS", {})
 
-        # --- Layer 5: Similarity link traversal (2-hop, bidirectional, strength-aware) ---
+        # --- ⑦ Similarity Link Traversal — 2-hop near-miss graph (bidirectional, strength-aware) ---
         if hasattr(self._backend, "get_similarity_links"):
             semantic_evidences = [e for e in evidence.evidences if e.layer == "semantic" and e.record_id]
             link_count = 0
@@ -759,7 +759,7 @@ class BitmodProxy:
         else:
             _step("similarity_links", "SKIP", {})
 
-        # --- Layer 6: Atomic fact search ---
+        # --- ⑧ Atomic Fact Search — embedding search over extracted facts ---
         if self._embedder and self._embed_circuit.can_execute() and hasattr(self._backend, "search_atomic_facts"):
             try:
                 query_emb = self._embedder.embed(norm)
@@ -809,7 +809,7 @@ class BitmodProxy:
             reason = "no_embedder" if not self._embedder else "no_backend_support"
             _step("atomic_facts", "SKIP", {"reason": reason})
 
-        # --- Layer 7: Session-aware caching ---
+        # --- ⑨ Session Context — prior turn injection ---
         session_state = self._session_tracker.get_or_create(messages_for_context)
         if session_state.turn_count > 0:
             ctx = session_state.last_exchange_context()

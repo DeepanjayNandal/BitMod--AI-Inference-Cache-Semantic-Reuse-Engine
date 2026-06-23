@@ -3,7 +3,6 @@
 from bitmod.interfaces.database import ChunkRecord, DatabaseBackend, DocumentRecord, SearchResult, SectionRecord
 from bitmod.interfaces.embeddings import EmbeddingProvider
 from bitmod.interfaces.llm import LLMMessage, LLMProvider, LLMResponse, ToolDefinition
-from bitmod.interfaces.messaging import IncomingMessage, MessagingPlatform, OutgoingMessage
 from bitmod.interfaces.vectors import VectorStore
 
 __all__ = [
@@ -18,7 +17,4 @@ __all__ = [
     "ToolDefinition",
     "EmbeddingProvider",
     "VectorStore",
-    "MessagingPlatform",
-    "IncomingMessage",
-    "OutgoingMessage",
 ]

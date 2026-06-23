@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from bitmod.config import DatabaseConfig, EmbeddingConfig, LLMConfig, VectorStoreConfig
     from bitmod.interfaces import DatabaseBackend, EmbeddingProvider, LLMProvider, VectorStore
-    from bitmod.interfaces.messaging import MessagingPlatform
 
 
 def get_backend(config: DatabaseConfig | None = None) -> DatabaseBackend:
@@ -181,28 +180,3 @@ def get_vector_store(config: VectorStoreConfig | None = None) -> VectorStore | N
             raise ValueError(f"Unknown vector store: {config.store}")
 
 
-def get_messaging_platform(platform: str, **kwargs: object) -> MessagingPlatform:
-    """Create a messaging platform adapter."""
-    match platform:
-        case "telegram":
-            from bitmod.adapters.msg_telegram import TelegramAdapter
-
-            return TelegramAdapter(**kwargs)  # type: ignore[arg-type]
-        case "discord":
-            from bitmod.adapters.msg_discord import DiscordAdapter
-
-            return DiscordAdapter(**kwargs)  # type: ignore[arg-type]
-        case "slack":
-            from bitmod.adapters.msg_slack import SlackAdapter
-
-            return SlackAdapter(**kwargs)  # type: ignore[arg-type]
-        case "whatsapp":
-            from bitmod.adapters.msg_whatsapp import WhatsAppAdapter
-
-            return WhatsAppAdapter(**kwargs)  # type: ignore[arg-type]
-        case "matrix":
-            from bitmod.adapters.msg_matrix import MatrixAdapter
-
-            return MatrixAdapter(**kwargs)  # type: ignore[arg-type]
-        case _:
-            raise ValueError(f"Unknown messaging platform: {platform}")
