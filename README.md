@@ -34,23 +34,23 @@ flowchart TD
     end
 
     subgraph ce ["9-Layer Cache Engine  ·  Bayesian Evidence Accumulation"]
-        C1["① Exact Match — SHA-256 composite key  ·  O(1)"]
-        C2["② Source Verification — version hash per section"]
-        C3["③ Semantic Similarity — embedding cosine ≥ 0.92"]
-        C4["④ Composable Decomposition — sub-query reuse"]
-        C5["⑤ Fuzzy Match — Jaccard + overlap ≥ 0.80"]
-        C6["⑥ Similarity Link Traversal — near-miss graph"]
-        C7["⑦ Atomic Fact Search — reusable fact extraction"]
-        C8["⑧ Cache Qualification Gate — context-aware bypass"]
-        C9["⑨ Cascade Invalidation + TTL Eviction"]
-        C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7 --> C8 --> C9
+        C0["① Normalization — composite SHA-256 key"]
+        C1["② Exact Match — O(1) key lookup"]
+        C2["③ Source Verification — version hash check"]
+        C3["④ Semantic Similarity — embedding cosine ≥ 0.92"]
+        C4["⑤ Composable Decomposition — sub-query reuse"]
+        C5["⑥ Fuzzy Match — Jaccard + token overlap ≥ 0.85"]
+        C6["⑦ Similarity Link Traversal — near-miss graph"]
+        C7["⑧ Atomic Fact Search — reusable facts"]
+        C8["⑨ Session Context — prior turn injection"]
+        C0 --> C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7 --> C8
     end
 
     subgraph p ["Pluggable Provider Layer  ·  Hexagonal Architecture"]
-        P1["LLM  ·  12 native adapters + 200+ OpenAI-compat"]
+        P1["LLM  ·  OpenAI · Anthropic · Ollama · 200+ OpenAI-compat"]
         P2["Embeddings  ·  4 providers"]
-        P3["Databases  ·  4 backends"]
-        P4["Vector Stores  ·  3 providers"]
+        P3["Databases  ·  SQLite (default) · PostgreSQL"]
+        P4["Vector Stores  ·  Qdrant · Chroma · Pinecone"]
     end
 
     A --> gw --> ce
@@ -145,7 +145,7 @@ This ensures answers never go stale when documents are updated.
 └────────────────────┘
 ```
 
-**Design decision — hexagonal architecture:** All external dependencies (LLM, database, embeddings, vector stores, messaging) sit behind typed abstract interfaces. Swapping from SQLite to PostgreSQL or from OpenAI to Anthropic is a one-line config change, not a code change. This is enforced via `core/bitmod/interfaces/` and 29 concrete adapter implementations.
+**Design decision — hexagonal architecture:** All external dependencies (LLM, database, embeddings, vector stores) sit behind typed abstract interfaces. Swapping from SQLite to PostgreSQL or from OpenAI to Anthropic is a one-line config change, not a code change. This is enforced via `core/bitmod/interfaces/` and 29 concrete adapter implementations.
 
 ---
 
@@ -161,10 +161,9 @@ This ensures answers never go stale when documents are updated.
 | Vector search | Qdrant (prod) · Chroma (dev) · Pinecone (cloud) |
 | Embeddings | Ollama nomic-embed-text · OpenAI · Cohere · local sentence-transformers |
 | Containerization | Docker, multi-stage builds, Docker Compose (3 profiles) |
-| Kubernetes | Helm charts with auto-scaling, PDBs, NetworkPolicies |
-| CI/CD | GitHub Actions — 7 jobs: lint, typecheck, test (3.11/3.12/3.13), build, frontend, security |
+| CI/CD | GitHub Actions (lint, typecheck, test, build, security) |
 | Security scanning | gitleaks, pip-audit, semgrep |
-| Observability | structlog, OpenTelemetry hooks, Prometheus metrics, Grafana dashboards |
+| Observability | structlog, OpenTelemetry hooks, Prometheus metrics |
 | Package tooling | hatchling, ruff, pre-commit |
 
 ---
@@ -233,18 +232,11 @@ db_backend: sqlite      # postgresql | mysql | mongodb
 
 | Provider | Key | Notes |
 |---|---|---|
-| **Any OpenAI-compatible** | `BITMOD_LLM_API_KEY` | Groq, Together, Fireworks, vLLM, LM Studio, Jan.ai, 200+ |
-| Ollama | none | llama3.2, mistral, phi3, gemma2 — fully local |
-| Anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4, claude-haiku |
+| **Any OpenAI-compatible** | `BITMOD_LLM_API_KEY` | Groq, Together, vLLM, LM Studio, 200+ endpoints |
+| Ollama | none | llama3.2, mistral, phi3 — fully local, no API key |
 | OpenAI | `OPENAI_API_KEY` | gpt-4o, gpt-4o-mini |
+| Anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4, claude-haiku |
 | Gemini | `GEMINI_API_KEY` | gemini-2.0-flash |
-| xAI | `XAI_API_KEY` | grok-3 |
-| Mistral | `MISTRAL_API_KEY` | mistral-large |
-| Perplexity | `PERPLEXITY_API_KEY` | sonar-pro |
-| OpenRouter | `OPENROUTER_API_KEY` | unified gateway |
-| HuggingFace | `HF_API_KEY` | inference API |
-| AWS Bedrock | IAM credentials | Claude, Titan, Llama |
-| Azure OpenAI | `AZURE_OPENAI_API_KEY` | GPT-4o via Azure |
 
 ### Databases
 
@@ -255,15 +247,14 @@ db_backend: sqlite      # postgresql | mysql | mongodb
 | MySQL | FULLTEXT + approximate | Existing MySQL infrastructure |
 | MongoDB | Atlas Search | Document-heavy workloads |
 
-### Embeddings · Vector Stores · Messaging
+### Embeddings & Vector Stores
 
-| Embeddings | Vector Stores | Messaging |
-|---|---|---|
-| Ollama nomic-embed-text (768d) | Qdrant (production) | Slack |
-| Local all-MiniLM-L6-v2 (384d) | Chroma (development) | Discord |
-| OpenAI text-embedding-3-small (1536d) | Pinecone (managed cloud) | Telegram |
-| Cohere embed-v4.0 (1024d) | | Matrix |
-| | | WhatsApp Business |
+| Embeddings | Vector Stores |
+|---|---|
+| Ollama nomic-embed-text (768d) | Qdrant (production) |
+| Local all-MiniLM-L6-v2 (384d) | Chroma (development) |
+| OpenAI text-embedding-3-small (1536d) | Pinecone (managed cloud) |
+| Cohere embed-v4.0 (1024d) | |
 
 ---
 
@@ -322,7 +313,7 @@ bitmod/
 │   ├── auth.py           # JWT authentication
 │   ├── namespaces.py     # Multi-tenant isolation
 │   ├── migrations.py     # Schema migration runner
-│   ├── adapters/         # 29 provider adapters
+│   ├── adapters/         # Provider adapters (LLM, DB, vector, embeddings)
 │   ├── interfaces/       # Abstract base classes (hexagonal architecture)
 │   ├── ingestion/        # Document parser + chunker + pipeline
 │   └── proxy/            # Reverse proxy (OpenAI / Anthropic / Gemini format)
@@ -331,10 +322,10 @@ bitmod/
 │   ├── chat/             # Chat service — FastAPI + SSE streaming
 │   └── frontend/         # Admin dashboard — Next.js 15, React 19, Tailwind v4
 ├── sdk/python/           # Python SDK (bitmod-client)
-├── db/migrations/        # 11 versioned database migrations
-├── deploy/               # Helm charts, Docker Compose, Grafana dashboards
-├── docs/                 # Architecture docs, ADRs, security runbooks
-└── tests/                # 54 test modules, 1000+ test functions
+├── db/migrations/        # Versioned database migrations
+├── deploy/               # Docker Compose, Grafana dashboards
+├── docs/                 # Architecture docs, ADRs
+└── tests/                # Unit + integration test suite
 ```
 
 ---
@@ -348,6 +339,14 @@ bitmod/
 **Why Bayesian scoring over a single threshold?** A fuzzy match at 0.78 and a semantic match at 0.88 together are more reliable than either alone. Multiplicative composition prevents false confidence from a single weak signal.
 
 **What this doesn't do:** BitMod is a cache and retrieval layer, not an agent framework or RAG pipeline replacement. It works best for high-repetition query workloads — support, legal, HR, documentation Q&A.
+
+---
+
+## Known Limitations
+
+- **Benchmark hit rates are workload-dependent** — the 94% figure is measured on high-repetition corpora (support tickets, legal Q&A). Diverse or open-ended conversations will see lower rates.
+- **Failed LLM responses can get cached** — if an LLM call errors and the response passes the confidence gate, it gets stored and served to future queries. Mitigation: response validation before cache write is on the roadmap.
+- **Not a RAG replacement** — BitMod caches and reuses LLM outputs; it does not do retrieval-augmented generation or long-document reasoning.
 
 ---
 
