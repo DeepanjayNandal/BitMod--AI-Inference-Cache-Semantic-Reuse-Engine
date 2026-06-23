@@ -353,4 +353,4 @@ bitmod/
 
 ## License
 
-© 2026 Deepanjay Nandal. All rights reserved.
+MIT License — © 2026 Deepanjay Nandal
