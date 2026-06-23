@@ -4,20 +4,20 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-> **Compute once, serve forever.** BitMod sits between your application and any LLM provider, intercepting queries and serving semantically equivalent ones from cache — cutting response latency and API costs without changing a line of application code.
+> **Compute once, serve forever.** BitMod sits between your application and any LLM provider, intercepting queries and serving semantically equivalent ones from cache, cutting response latency and API costs without changing a line of application code.
 
 ---
 
 ## Benchmark Results
 
-Two scenarios measured — local Ollama (no API cost) and remote LLM (GPT-4o / Claude):
+Two scenarios measured: local Ollama (no API cost) and remote LLM (GPT-4o / Claude)
 
 | Scenario | Cache Hit Rate | Cached Latency | LLM Latency | Speedup |
 |---|---|---|---|---|
 | Local — Ollama llama3.2 | 50.7% | ~0ms | 500ms+ | >500× |
 | Remote — GPT-4o / Claude | **94%** | **71ms avg** | **12.5s avg** | **176×** |
 
-The gap between the two scenarios reflects query repetition patterns. Remote LLM benchmarks run with high-repetition prompt sets (legal Q&A, support tickets, code review) — exactly the workloads where caching pays off most.
+The gap between the two scenarios reflects query repetition patterns. Remote LLM benchmarks run with high-repetition prompt sets (legal Q&A, support tickets, code review), exactly the workloads where caching pays off most.
 
 ---
 
@@ -63,15 +63,15 @@ flowchart TD
 ```
 
 **Three possible outcomes for every query:**
-- **Cache hit** (confidence ≥ 0.95) — response served immediately, no LLM call
-- **Partial hit** (0.30–0.94) — cached context injected into a reduced LLM prompt, cutting token usage 50–80%
-- **Cache miss** (< 0.30) — full LLM generation, result stored for future reuse
+- **Cache hit** (confidence ≥ 0.95): response served immediately, no LLM call
+- **Partial hit** (0.30–0.94): cached context injected into a reduced LLM prompt, cutting token usage 50–80%
+- **Cache miss** (< 0.30): full LLM generation, result stored for future reuse
 
 ---
 
 ## How the Cache Engine Works
 
-Bitmod uses **Bayesian evidence accumulation** — each layer contributes a confidence score `[0, 1]`, composed as:
+Bitmod uses **Bayesian evidence accumulation**: each layer contributes a confidence score `[0, 1]`, composed as:
 
 ```
 total_confidence = 1 - ∏(1 - cᵢ)
@@ -95,8 +95,8 @@ This is not winner-take-all. A semantic match at 0.88 plus a fuzzy match at 0.72
 
 **Supporting mechanisms (not lookup layers):**
 
-- **Cache Qualification Gate** — runs before serving from layers ② and ⑤, detects context-dependent queries ("tell me more", pronoun-heavy follow-ups) and routes them to the LLM instead
-- **Cascade Invalidation + TTL** — maintenance layer; source changes propagate invalidation to all dependent cached answers; cost-aware LRU eviction prioritises keeping expensive-to-regenerate entries
+- **Cache Qualification Gate**: runs before serving from layers ② and ⑤, detects context-dependent queries ("tell me more", pronoun-heavy follow-ups) and routes them to the LLM instead
+- **Cascade Invalidation + TTL**: maintenance layer; source changes propagate invalidation to all dependent cached answers; cost-aware LRU eviction prioritises keeping expensive-to-regenerate entries
 
 ### Source-Version Locking
 
@@ -145,7 +145,7 @@ This ensures answers never go stale when documents are updated.
 └────────────────────┘
 ```
 
-**Design decision — hexagonal architecture:** All external dependencies (LLM, database, embeddings, vector stores) sit behind typed abstract interfaces. Swapping from SQLite to PostgreSQL or from OpenAI to Anthropic is a one-line config change, not a code change. This is enforced via `core/bitmod/interfaces/` and 29 concrete adapter implementations.
+**Design decision, hexagonal architecture:** All external dependencies (LLM, database, embeddings, vector stores) sit behind typed abstract interfaces. Swapping from SQLite to PostgreSQL or from OpenAI to Anthropic is a one-line config change, not a code change. This is enforced via `core/bitmod/interfaces/` and 29 concrete adapter implementations.
 
 ---
 
@@ -338,15 +338,15 @@ bitmod/
 
 **Why Bayesian scoring over a single threshold?** A fuzzy match at 0.78 and a semantic match at 0.88 together are more reliable than either alone. Multiplicative composition prevents false confidence from a single weak signal.
 
-**What this doesn't do:** BitMod is a cache and retrieval layer, not an agent framework or RAG pipeline replacement. It works best for high-repetition query workloads — support, legal, HR, documentation Q&A.
+**What this doesn't do:** BitMod is a cache and retrieval layer, not an agent framework or RAG pipeline replacement. It works best for high-repetition query workloads: support, legal, HR, documentation Q&A.
 
 ---
 
 ## Known Limitations
 
-- **Benchmark hit rates are workload-dependent** — the 94% figure is measured on high-repetition corpora (support tickets, legal Q&A). Diverse or open-ended conversations will see lower rates.
-- **Failed LLM responses can get cached** — if an LLM call errors and the response passes the confidence gate, it gets stored and served to future queries. Mitigation: response validation before cache write is on the roadmap.
-- **Not a RAG replacement** — BitMod caches and reuses LLM outputs; it does not do retrieval-augmented generation or long-document reasoning.
+- **Benchmark hit rates are workload-dependent**: the 94% figure is measured on high-repetition corpora (support tickets, legal Q&A). Diverse or open-ended conversations will see lower rates.
+- **Failed LLM responses can get cached**, if an LLM call errors and the response passes the confidence gate, it gets stored and served to future queries. Mitigation: response validation before cache write is on the roadmap.
+- **Not a RAG replacement**: BitMod caches and reuses LLM outputs; it does not do retrieval-augmented generation or long-document reasoning.
 
 ---
 
